@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # user email address
-#SBATCH --mail-user=sxf279@case.edu
+#SBATCH --mail-user=EMAIL
 
 # mail is sent to you when the job starts and when it terminates or aborts
 #SBATCH --mail-type=END,FAIL
@@ -18,8 +18,23 @@
 #SBATCH --mem=32gb
 
 # time requirements
-#SBATCH --time=24:00:00
+#SBATCH --time=48:00:00
 
-bash scrna.preprocess_seq.sh
+# dependencies
+#SBATCH --depend=afterok:SLURM_JOB_ID
 
+# create array
+#SBATCH --array=1-BATCH
+
+# read parameters
+while getopts d:g: option
+do
+    case "$option" in
+        d) dirData=$OPTARG;;
+        g) genome=$OPTARG;;
+    esac
+done
+bash scrna.preprocess_seq.sh \
+    -d $dirData/raw$SLURM_ARRAY_TASK_ID \
+    -g $genome
 

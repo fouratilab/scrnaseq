@@ -8,14 +8,11 @@ module load gcc/6.3.0
 module load STAR/2.5.3a
 
 # read input arguments
-compress=false
-while getopts d:g:m:c option
+while getopts d:g: option
 do
     case "${option}" in
-	d) dirData=$OPTARG;;
+	d) dataDir=$OPTARG;;
 	g) genome=$OPTARG;;
-	m) mateLength=$OPTARG;;
-	c) compress=true;;
     esac
 done
 
@@ -31,23 +28,15 @@ if [[ -z $mateLength ]]
 then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: determining mate length..."
-    if [[ ! -z "$dirData" ]]
+    if [[ ! -z "$dataDir" ]]
     then
-	if $compress
-	then
-	    file=$(find $dirData -name "*.dsrc" | head -n 1)
-	    mateLength=$($bin/dsrc-2.0/dsrc d -s -t$maxProc $file | \
-			     head -n 4000 | \
-			     awk 'NR%2==0 {print length($1)}' | \
-			     sort -rn | \
-			     head -n 1)
-	else
-	    file=$(find $dirData -name "*.fq.gz" | head -n 1)
-	    mateLength=$(zcat $file | \
-			     head -n 4000 | \
-			     awk 'NR%2==0 {print length($1)}' | \
-			     sort -rn | \
-			     head -n 1)
+	# mate 2 has the reads
+	file=$(find $dataDir -name "*_2.fq.gz" | head -n 1)
+	mateLength=$(zcat $file | \
+	    head -n 4000 | \
+	    awk 'NR%2==0 {print length($1)}' | \
+	    sort -rn | \
+	    head -n 1)
 	fi
         # echo $mateLength
     fi

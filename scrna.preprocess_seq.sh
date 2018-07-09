@@ -1,18 +1,44 @@
 #!/bin/bash
+# @author Slim Fourati
+# @version 0.1
 
+# load modules
 module load picard/2.11
 module load STAR/2.5.3a
 
+# read arguments
+while getopts d:g: option
+do
+    case "$option" in
+	d) dataDir=$OPTARG;;
+	g) genome=$OPTARG;;
+    esac
+done
+
+# set global variables for the script
 bin=/mnt/projects/SOM_PATH_RXS745U/bin
-rawDir=/scratch/users/sxf279/20180706_SeqWell/test
-sampleID=SRR5250847
-mateLength=50
-genome=GRCh38
 seqDependencies="/mnt/projects/SOM_PATH_RXS745U/genome/$genome"
 genomeFasta="$seqDependencies/Sequence/genome.fa"
-genomeDir="$seqDependencies/ggOverhang$(($mateLength -1))"
 refFlat="$seqDependencies/Annotation/genes.refFlat"
 maxProc=8
+
+# 0. Determine mate length and sample id
+flag=true
+if $flag
+then
+    currentDate=$(date +"%Y-%m-%d %X")
+    echo -ne "$currentDate: determining mate length..."
+    file=$(find $dataDir -name "*_2.fq.gz" | head -n 1)
+    sampleID=$(echo $file | sed -r 's|.+/([^/]+)_2.fq.gz|\1|g')
+    mateLength=$(zcat $file | \
+        head -n 4000 | \
+        awk 'NR%2==0 {print length($1)}' | \
+        sort -rn | \
+        head -n 1)
+    # echo $mateLength
+    echo "done"
+fi
+genomeDir="$seqDependencies/ggOverhang$(($mateLength -1))"
 
 # 1. convert FASTQ to BAM
 flag=true
@@ -21,9 +47,9 @@ then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: convert fastq to bam..."
     java -jar $PICARD FastqToSam \
-	F1=$rawDir/${sampleID}_1.fq.gz \
-	F2=$rawDir/${sampleID}_2.fq.gz \
-	O=$rawDir/${sampleID}.unalign.bam \
+	F1=$dataDir/${sampleID}_1.fq.gz \
+	F2=$dataDir/${sampleID}_2.fq.gz \
+	O=$dataDir/${sampleID}.unalign.bam \
 	SM=$sampleID &>/dev/null
     if [ $? != 0 ]
     then
@@ -31,8 +57,8 @@ then
         exit 1
     fi
     # removed unused files
-    rm $rawDir/${sampleID}_1.fq.gz
-    rm $rawDir/${sampleID}_2.fq.gz
+    rm $dataDir/${sampleID}_1.fq.gz
+    rm $dataDir/${sampleID}_2.fq.gz
     echo "done"
 fi
 
@@ -43,9 +69,9 @@ then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: add cell tag to bam..."
     $bin/Drop-seq_tools-1.13/TagBamWithReadSequenceExtended \
-	INPUT=$rawDir/${sampleID}.unalign.bam \
-	OUTPUT=$rawDir/${sampleID}.unalign_tag.bam \
-	SUMMARY=$rawDir/${sampleID}.unalign_tag.summary.txt \
+	INPUT=$dataDir/${sampleID}.unalign.bam \
+	OUTPUT=$dataDir/${sampleID}.unalign_tag.bam \
+	SUMMARY=$dataDir/${sampleID}.unalign_tag.summary.txt \
 	BASE_RANGE=1-12 \
 	BASE_QUALITY=10 \
 	BARCODED_READ=1 \
@@ -58,7 +84,7 @@ then
         exit 1
     fi
     # remove unused files
-    rm $rawDir/${sampleID}.unalign.bam
+    rm $dataDir/${sampleID}.unalign.bam
     echo "done"
 fi
 
@@ -69,9 +95,9 @@ then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: add umi to bam..."
     $bin/Drop-seq_tools-1.13/TagBamWithReadSequenceExtended \
-	INPUT=$rawDir/${sampleID}.unalign_tag.bam \
-	OUTPUT=$rawDir/${sampleID}.unalign_tag_umi.bam \
-	SUMMARY=$rawDir/${sampleID}.unalign_tag_umi.summary.txt \
+	INPUT=$dataDir/${sampleID}.unalign_tag.bam \
+	OUTPUT=$dataDir/${sampleID}.unalign_tag_umi.bam \
+	SUMMARY=$dataDir/${sampleID}.unalign_tag_umi.summary.txt \
 	BASE_RANGE=13-20 \
 	BASE_QUALITY=10 \
 	BARCODED_READ=1 \
@@ -84,7 +110,7 @@ then
         exit 1
     fi
     # remove unused files
-    rm $rawDir/${sampleID}.unalign_tag.bam
+    rm $dataDir/${sampleID}.unalign_tag.bam
     echo "done"
 fi
 
@@ -96,15 +122,15 @@ then
     echo -ne "$currentDate: filter bam based on base quality..."
     $bin/Drop-seq_tools-1.13/FilterBAM \
 	TAG_REJECT=XQ \
-	INPUT=$rawDir/${sampleID}.unalign_tag_umi.bam \
-	OUTPUT=$rawDir/${sampleID}.unalign_filter.bam &>/dev/null
+	INPUT=$dataDir/${sampleID}.unalign_tag_umi.bam \
+	OUTPUT=$dataDir/${sampleID}.unalign_filter.bam &>/dev/null
     if [ $? != 0 ]
     then
         echo -ne "error\n  unable to filter bam"
         exit 1
     fi
     # remove unused files
-    rm $rawDir/${sampleID}.unalign_tag_umi.bam
+    rm $dataDir/${sampleID}.unalign_tag_umi.bam
     echo "done"
 fi
 
@@ -115,9 +141,9 @@ then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: triming 5p primer..."
     $bin/Drop-seq_tools-1.13/TrimStartingSequence \
-	INPUT=$rawDir/${sampleID}.unalign_filter.bam \
-	OUTPUT=$rawDir/${sampleID}.unalign_trim_5p.bam \
-	OUTPUT_SUMMARY=$rawDir/${sampleID}.adapter_trimming_report.txt \
+	INPUT=$dataDir/${sampleID}.unalign_filter.bam \
+	OUTPUT=$dataDir/${sampleID}.unalign_trim_5p.bam \
+	OUTPUT_SUMMARY=$dataDir/${sampleID}.adapter_trimming_report.txt \
 	SEQUENCE=AAGCAGTGGTATCAACGCAGAGTGAATGGG \
 	MISMATCHES=0 \
 	NUM_BASES=5 &>/dev/null
@@ -127,7 +153,7 @@ then
         exit 1
     fi
     # remove unused files
-    rm $rawDir/${sampleID}.unalign_filter.bam
+    rm $dataDir/${sampleID}.unalign_filter.bam
     echo "done"
 fi
 
@@ -138,9 +164,9 @@ then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: triming 3p polyA..."
     $bin/Drop-seq_tools-1.13/PolyATrimmer \
-	INPUT=$rawDir/${sampleID}.unalign_trim_5p.bam \
-	OUTPUT=$rawDir/${sampleID}.unalign_trimmed.bam \
-	OUTPUT_SUMMARY=$rawDir/${sampleID}.polyA_trimming_report.txt \
+	INPUT=$dataDir/${sampleID}.unalign_trim_5p.bam \
+	OUTPUT=$dataDir/${sampleID}.unalign_trimmed.bam \
+	OUTPUT_SUMMARY=$dataDir/${sampleID}.polyA_trimming_report.txt \
 	MISMATCHES=0 \
 	NUM_BASES=6 &>/dev/null
     if [ $? != 0 ]
@@ -149,7 +175,7 @@ then
         exit 1
     fi
     # remove unused files
-    rm $rawDir/${sampleID}.unalign_trim_5p.bam
+    rm $dataDir/${sampleID}.unalign_trim_5p.bam
     echo "done"
 fi
 
@@ -160,8 +186,8 @@ then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: convert bam to fastq..."
     java -jar $PICARD SamToFastq \
-	INPUT=$rawDir/${sampleID}.unalign_trimmed.bam \
-	FASTQ=$rawDir/${sampleID}.unalign_trimmed.fq &>/dev/null
+	INPUT=$dataDir/${sampleID}.unalign_trimmed.bam \
+	FASTQ=$dataDir/${sampleID}.unalign_trimmed.fq &>/dev/null
     if [ $? != 0 ]
     then
         echo -ne "error\n  unable to convert bam"
@@ -177,17 +203,18 @@ then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: aligning reads..."
     STAR --genomeDir $genomeDir \
-	--readFilesIn $rawDir/${sampleID}.unalign_trimmed.fq \
+	--readFilesIn $dataDir/${sampleID}.unalign_trimmed.fq \
+	--genomeLoad LoadAndRemove \
 	--runThreadN $maxProc \
-	--outSAMtype SAM Unsorted \
-	--outFileNamePrefix $rawDir/${sample}_star &>/dev/null
+	--outSAMtype SAM \
+	--outFileNamePrefix $dataDir/${sampleID}_star &>/dev/null
     if [ $? != 0 ]
     then
         echo -ne "error\n  unable to aligned"
         exit 1
     fi
     # removed unused files
-    rm $rawDir/${sampleID}.unalign_trimmed.fq
+    rm $dataDir/${sampleID}.unalign_trimmed.fq
     echo "done"
 fi
 
@@ -198,8 +225,8 @@ then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: sorting sam..."
     java -jar $PICARD SortSam \
-	I=$rawDir/${sampleID}_starAligned.out.sam \
-	O=$rawDir/${sampleID}.aligned_sorted.bam \
+	I=$dataDir/${sampleID}_starAligned.out.sam \
+	O=$dataDir/${sampleID}.aligned_sorted.bam \
 	SO=queryname &>/dev/null
     if [ $? != 0 ]
     then
@@ -207,7 +234,7 @@ then
         exit 1
     fi
     # removed unused files
-    rm $rawDir/${sampleID}_starAligned.out.sam
+    rm $dataDir/${sampleID}_starAligned.out.sam
     echo "done"
 fi
 
@@ -219,9 +246,9 @@ then
     echo -ne "$currentDate: merging bbam..."
     java -jar $PICARD MergeBamAlignment \
 	REFERENCE_SEQUENCE=$genomeFasta \
-	UNMAPPED_BAM=$rawDir/${sampleID}.unalign_trimmed.bam \
-	ALIGNED_BAM=$rawDir/${sampleID}.aligned_sorted.bam \
-	OUTPUT=$rawDir/${sampleID}.merged.bam \
+	UNMAPPED_BAM=$dataDir/${sampleID}.unalign_trimmed.bam \
+	ALIGNED_BAM=$dataDir/${sampleID}.aligned_sorted.bam \
+	OUTPUT=$dataDir/${sampleID}.merged.bam \
 	INCLUDE_SECONDARY_ALIGNMENTS=false \
 	PAIRED_RUN=false &>/dev/null
     if [ $? != 0 ]
@@ -230,8 +257,8 @@ then
         exit 1
     fi
     # removed unused files
-    rm $rawDir/${sampleID}.unalign_trimmed.bam
-    rm $rawDir/${sampleID}.aligned_sorted.bam
+    rm $dataDir/${sampleID}.unalign_trimmed.bam
+    rm $dataDir/${sampleID}.aligned_sorted.bam
     echo "done"
 fi
 
@@ -242,8 +269,8 @@ then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: tag exonic reads..."
     $bin/Drop-seq_tools-1.13/TagReadWithGeneExon \
-	I=$rawDir/${sampleID}.merged.bam \
-	O=$rawDir/${sampleID}.star_gene_exon_tagged.bam \
+	I=$dataDir/${sampleID}.merged.bam \
+	O=$dataDir/${sampleID}.star_gene_exon_tagged.bam \
 	ANNOTATIONS_FILE=$refFlat \
 	TAG=GE &>/dev/null
     if [ $? != 0 ]
@@ -252,7 +279,7 @@ then
         exit 1
     fi
     # remove unused files
-    rm $rawDir/${sampleID}.merged.bam
+    rm $dataDir/${sampleID}.merged.bam
     echo "done"
 fi
 
@@ -263,16 +290,15 @@ then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: generate digital expression..."
     $bin/Drop-seq_tools-1.13/DigitalExpression \
-	I=$rawDir/${sampleID}.star_gene_exon_tagged.bam \
-	O=$rawDir/${sampleID}.dge.txt.gz \
-	SUMMARY=$rawDir/${sampleID}.dge.summary.txt \
-	NUM_CORE_BARCODES=100 &>/dev/null
+	I=$dataDir/${sampleID}.star_gene_exon_tagged.bam \
+	O=$dataDir/${sampleID}.dge.txt.gz \
+	SUMMARY=$dataDir/${sampleID}.dge.summary.txt &>/dev/null
     if [ $? != 0 ]
     then
         echo -ne "error\n  unable to generate digital expression"
         exit 1
     fi
     # remove unused files
-    rm $rawDir/${sampleID}.star_gene_exon_tagged.bam
+    rm $dataDir/${sampleID}.star_gene_exon_tagged.bam
     echo "done"
 fi
