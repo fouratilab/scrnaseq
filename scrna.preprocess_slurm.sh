@@ -7,10 +7,10 @@
 #SBATCH --mail-type=END,FAIL
 
 # name of job
-#SBATCH --job-name=scrna
+#SBATCH --job-name=scrna_%a
 
 # standard output file
-#SBATCH --output=scrna.log
+#SBATCH --output=scrna_%a.out
 
 # number of nodes and processors, memory required
 #SBATCH --nodes=1
