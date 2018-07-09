@@ -37,7 +37,6 @@ then
 	    awk 'NR%2==0 {print length($1)}' | \
 	    sort -rn | \
 	    head -n 1)
-	fi
         # echo $mateLength
     fi
     echo -ne "done\n"
