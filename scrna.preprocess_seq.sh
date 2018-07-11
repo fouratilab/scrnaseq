@@ -291,7 +291,7 @@ then
     echo -ne "$currentDate: generate digital expression..."
     java -Xmx32g \
 	-XX:+UseParallelOldGC \
-	-XX:rallelGCThreads=1 \
+	-XX:ParallelGCThreads=1 \
 	-XX:GCTimeLimit=50 \
 	-XX:GCHeapFreeLimit=10 \
 	-XX:+HeapDumpOnOutOfMemoryError \
