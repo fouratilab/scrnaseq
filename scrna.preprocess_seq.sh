@@ -289,10 +289,18 @@ if $flag
 then
     currentDate=$(date +"%Y-%m-%d %X")
     echo -ne "$currentDate: generate digital expression..."
-    $bin/Drop-seq_tools-1.13/DigitalExpression \
+    java -Xmx32g \
+	-XX:+UseParallelOldGC \
+	-XX:rallelGCThreads=1 \
+	-XX:GCTimeLimit=50 \
+	-XX:GCHeapFreeLimit=10 \
+	-XX:+HeapDumpOnOutOfMemoryError \
+	-jar $bin/Drop-seq_tools-1.13/jar/dropseq.jar \
+	DigitalExpression \
 	I=$dataDir/${sampleID}.star_gene_exon_tagged.bam \
 	O=$dataDir/${sampleID}.dge.txt.gz \
-	SUMMARY=$dataDir/${sampleID}.dge.summary.txt &>/dev/null
+	SUMMARY=$dataDir/${sampleID}.dge.summary.txt \
+	MIN_NUM_READS_PER_CELL=1 &>/dev/null
     if [ $? != 0 ]
     then
         echo -ne "error\n  unable to generate digital expression"
