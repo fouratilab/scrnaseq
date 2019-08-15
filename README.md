@@ -13,6 +13,15 @@ e=[e]mail address
 ```
 
 #### Run cellranger
+Each sample should be seperated in one folder. The name of the folder
+should match the SampleID
+ex. *rawDir*/*SampleID*/*SampleID*...I1_001.fastq.gz
+    *rawDir*/*SampleID*/*SampleID*...R1_001.fastq.gz
+    *rawDir*/*SampleID*/*SampleID*...R2_001.fastq.gz
+    ...
+where *rawDir* is the parent directory with the raw FASTQ files, and
+      *SampleID* sample id
+
 ```bash
 bash cellranger.master.sh -d {raw_directory}
 
@@ -21,3 +30,4 @@ d=parent [d]irectory with raw data; each sample must be seperated in a
   seperated directory; the subdirectory name will be used as sample id
   (required)
 ```
+

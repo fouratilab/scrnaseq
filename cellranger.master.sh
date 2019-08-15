@@ -45,4 +45,4 @@ sed -ri "s|^#SBATCH --mail-user=.+$|#SBATCH --mail-user=${email}|g" \
     cellranger.slurm
 sed -ri "s|^#SBATCH --array=1-.+$|#SBATCH --array=1-${nsamples}|g" \
     cellranger.slurm
-bash cellranger.slurm -d $fastqDir
+sbatch cellranger.slurm -d $fastqDir

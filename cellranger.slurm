@@ -7,10 +7,10 @@
 #SBATCH --mail-type=END,FAIL
 
 # name of job
-#SBATCH --job-name=cellranger
+#SBATCH --job-name=cellranger_%a
 
 # standard output file
-#SBATCH --output=cellranger_slurm.log
+#SBATCH --output=cellranger_slurm_%a.log
 
 # number of nodes and processors, memory required
 #SBATCH --tasks=32
@@ -37,4 +37,4 @@ sampleID=( $(echo $sampleID | \
 		 sed -r "s/[^/]+.fastq.gz//g" | \
 		 sort | \
 		 uniq) )
-echo "bash cellranger.sh -d ${sampleID[$(($SLURM_ARRAY_TASK_ID - 1))]}"
+bash cellranger.sh -d ${sampleID[$(($SLURM_ARRAY_TASK_ID - 1))]}
