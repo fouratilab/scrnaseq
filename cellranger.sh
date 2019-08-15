@@ -22,11 +22,14 @@ fi
 flag=true
 if $flag
 then
+    # change to directory
+    cd $fastqDir
+    
     # remove trailing back slash 
     sampleID=$(echo $fastqDir | sed -r 's|/$||g')
     sampleID=$(echo $sampleID | sed -r 's|.+/||g')
     $binDir/cellranger-3.0.2/cellranger count \
-					--id=$fastqDir/$sampleID \
+					--id=$sampleID \
 					--transcriptome=$genomeDir/Mmul_8/cellranger \
 					--fastqs=$fastqDir \
 					--sample=$sampleID \
