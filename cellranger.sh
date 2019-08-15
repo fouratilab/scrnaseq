@@ -35,5 +35,6 @@ then
 					--sample=$sampleID \
 					--localcores=32 \
 					--expect-cells=10000 \
-					--localmem=200
+					--localmem=200 \
+					--nosecondary
 fi
