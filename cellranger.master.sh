@@ -4,15 +4,22 @@
 
 # read input arguments
 email="sxf279@case.edu"
-genome="Mmul_8"
+genome="GRCh38"
+acceptedGenome=("GRCh38" "Mmul_10")
 
-while getopts :d:e: option
+while getopts :d:g:e: option
 do
     case "${option}" in
 	d) fastqDir=$OPTARG;;
 	e) email=$OPTARG;;
 	\?) echo "Invalid option: -$OPTARG"
 	    exit 1;;
+	g) genome=$OPTARG
+	    if [[ ! "${acceptedGenome[@]}" =~ "$genome" ]]
+	    then
+		echo "Invalid -g argument: choose between ${acceptedGenome[@]}"
+		exit 1
+	    fi;;
 	:)
 	    echo "Option -$OPTARG requires an argument."
 	    exit 1;;
@@ -45,4 +52,4 @@ sed -ri "s|^#SBATCH --mail-user=.+$|#SBATCH --mail-user=${email}|g" \
     cellranger.slurm
 sed -ri "s|^#SBATCH --array=1-.+$|#SBATCH --array=1-${nsamples}|g" \
     cellranger.slurm
-sbatch cellranger.slurm -d $fastqDir
+sbatch cellranger.slurm -d $fastqDir -g $genome

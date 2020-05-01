@@ -10,12 +10,11 @@
 #SBATCH --job-name=cellranger_%a
 
 # standard output file
-#SBATCH --output=cellranger_slurm_%a.log
+#SBATCH --output=cellranger_%a.log
 
 # number of nodes and processors, memory required
 #SBATCH --tasks=32
-#SBATCH --mem=200gb
-#SBATCH --partition=smp
+#SBATCH --mem=185gb
 
 # time requirements
 #SBATCH --time=72:00:00
@@ -24,10 +23,11 @@
 #SBATCH --array=1-BATCH
 
 # launch executable script
-while getopts d: option
+while getopts d:g: option
 do
     case "$option" in
         d) dirData=$OPTARG;;
+	g) genome=$OPTARG;;
     esac
 done
 
@@ -37,4 +37,6 @@ sampleID=( $(echo $sampleID | \
 		 sed -r "s/[^/]+.fastq.gz//g" | \
 		 sort | \
 		 uniq) )
-bash cellranger.sh -d ${sampleID[$(($SLURM_ARRAY_TASK_ID - 1))]}
+bash cellranger.sh \
+     -g $genome \
+     -d ${sampleID[$(($SLURM_ARRAY_TASK_ID - 1))]}
